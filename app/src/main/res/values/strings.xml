@@ -1,3 +1,15 @@
 <resources>
     <string name="app_name">Inventory_Team_Manager</string>
+    <string name="home">Home</string>
+    <string name="prime_design_inventory">Prime Design Inventory</string>
+    <string name="go_to_team_management">Go To Team Management</string>
+    <string name="a_man_driving_a_forklift">A man driving a forklift</string>
+    <string name="prime_design_weld_team">Prime Design Weld Team</string>
+    <string name="go_to_inventory_management">Go To Inventory Management</string>
+    <string name="a_welder_working_on_steel">A welder working on steel</string>
+    <string name="Inventory">Inventory</string>
+    <string name="search_parts">Search parts...</string>
+    <string name="add_part">Add Part</string>
+    <string name="remove_part">Remove Part</string>
+    <string name="delete_part">Delete Part</string>
 </resources>
