@@ -13,7 +13,7 @@ public class InventoryDbHelper extends SQLiteOpenHelper{
     public void onCreate(SQLiteDatabase db) {
         String SQL_CREATE_INVENTORY_TABLE = "CREATE TABLE Inventory ("
                 + "part_id TEXT PRIMARY KEY, "
-                + "date TEXT, "
+                + "initial_part_date TEXT, "
                 + "part_location TEXT, "
                 + "quantity INTEGER NOT NULL DEFAULT 0);";
 

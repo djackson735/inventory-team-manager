@@ -2,13 +2,13 @@ package com.example.inventory_team_manager.models;
 
 public class Part {
     private String partId;
-    private String date;
+    private String initialPartDate;
     private String partLocation;
     private int quantity;
 
-    public Part(String partId, String date, String partLocation, int quantity) {
+    public Part(String partId, String initialPartDate, String partLocation, int quantity) {
         this.partId = partId;
-        this.date = date;
+        this.initialPartDate = initialPartDate;
         this.partLocation = partLocation;
         this.quantity = quantity;
     }
@@ -21,12 +21,12 @@ public class Part {
         this.partId = partId;
     }
 
-    public String getDate() {
-        return date;
+    public String getInitialPartDate() {
+        return initialPartDate;
     }
 
-    public void setDate(String date) {
-        this.date = date;
+    public void setInitialPartDate(String initialPartDate) {
+        this.initialPartDate = initialPartDate;
     }
 
     public String getPartLocation() {
