@@ -12,21 +12,20 @@ public class InventoryDbHelper extends SQLiteOpenHelper{
     @Override
     public void onCreate(SQLiteDatabase db) {
         String SQL_CREATE_INVENTORY_TABLE = "CREATE TABLE Inventory ("
-                + "part_number TEXT PRIMARY KEY, "
-                + "job_order_number TEXT, "
-                + "description TEXT, "
+                + "part_id TEXT PRIMARY KEY, "
+                + "date TEXT, "
+                + "part_location TEXT, "
                 + "quantity INTEGER NOT NULL DEFAULT 0);";
 
         db.execSQL(SQL_CREATE_INVENTORY_TABLE);
 
         String SQL_CREATE_TRANSACTIONS_TABLE = "CREATE TABLE Transactions ("
                 + "transaction_id INTEGER PRIMARY KEY AUTOINCREMENT, "
-                + "part_number TEXT, "
-                + "job_order_number TEXT, "
-                + "date TEXT NOT NULL, "
-                + "quantity_change INTEGER NOT NULL, "
+                + "part_id TEXT, "
+                + "transaction_date TEXT, "
+                + "quantity INTEGER NOT NULL, "
                 + "transaction_type TEXT NOT NULL, "
-                + "FOREIGN KEY(part_number) REFERENCES Inventory(part_number));";
+                + "FOREIGN KEY(part_id) REFERENCES Inventory(part_id));";
     }
 
     //TODO: This upgrade method completely destroys the old db. Change it so it keeps old records and updates the incoming db.
@@ -37,3 +36,5 @@ public class InventoryDbHelper extends SQLiteOpenHelper{
         onCreate(db);
     }
 }
+
+
