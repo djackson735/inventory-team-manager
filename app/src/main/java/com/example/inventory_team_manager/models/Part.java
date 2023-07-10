@@ -4,13 +4,13 @@ public class Part {
     private String partId;
     private String initialPartDate;
     private String partLocation;
-    private int quantity;
+    private int partQuantity;
 
-    public Part(String partId, String initialPartDate, String partLocation, int quantity) {
+    public Part(String partId, String initialPartDate, String partLocation, int partQuantity) {
         this.partId = partId;
         this.initialPartDate = initialPartDate;
         this.partLocation = partLocation;
-        this.quantity = quantity;
+        this.partQuantity = partQuantity;
     }
 
     public String getPartId() {
@@ -37,12 +37,12 @@ public class Part {
         this.partLocation = partLocation;
     }
 
-    public int getQuantity() {
-        return quantity;
+    public int getPartQuantity() {
+        return partQuantity;
     }
 
-    public void setQuantity(int quantity) {
-        this.quantity = quantity;
+    public void setPartQuantity(int partQuantity) {
+        this.partQuantity = partQuantity;
     }
     
 }
