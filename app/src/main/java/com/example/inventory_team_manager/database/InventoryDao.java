@@ -6,6 +6,7 @@ import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 
 import com.example.inventory_team_manager.models.Part;
+import com.example.inventory_team_manager.util.ExceptionMessages;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -28,17 +29,18 @@ public class InventoryDao {
     public static final String TRANSACTION_TYPE = "transaction_type";
 
     private final InventoryDbHelper dbHelper;
+
     public InventoryDao(InventoryDbHelper dbHelper) {
         this.dbHelper = dbHelper;
     }
 
-    public long insertPart(Part part) {
+    public long insertPart(Part part) throws SQLException {
         SQLiteDatabase db = this.dbHelper.getWritableDatabase();
 
         long newRowId = -1;
 
         db.beginTransaction();
-        try{
+        try {
             ContentValues inventoryValues = new ContentValues();
             inventoryValues.put(PART_ID, part.getPartId());
             inventoryValues.put(INITIAL_PART_DATE, part.getInitialPartDate());
@@ -48,19 +50,15 @@ public class InventoryDao {
             newRowId = db.insert(INVENTORY, null, inventoryValues);
 
             if (newRowId == -1) {
-                throw new SQLException("Failed to insert row into Inventory");
+                throw new SQLException(ExceptionMessages.FAILED_TO_INSERT_INVENTORY);
             }
-            updateTransactions(part, part.getPartQuantity(), INSERTION);
+            updateTransactions(db, part, part.getPartQuantity(), INSERTION);
 
             db.setTransactionSuccessful();
-        } catch (SQLException e) {
-            //TODO: log SQLExceptions here
-        } catch (Exception e) {
-            //TODO: log generic exceptions here
         } finally {
             db.endTransaction();
+            db.close();
         }
-        db.close();
         return newRowId;
     }
 
@@ -80,146 +78,130 @@ public class InventoryDao {
 
         List<Part> allParts = new ArrayList<>();
 
-        while(cursor.moveToNext()) {
-            String partId = cursor.getString(
-                    cursor.getColumnIndexOrThrow(PART_ID));
-            String partDate = cursor.getString(
-                    cursor.getColumnIndexOrThrow(INITIAL_PART_DATE));
-            String partLocation = cursor.getString(
-                    cursor.getColumnIndexOrThrow(PART_LOCATION));
-            int quantity = cursor.getInt(
-                    cursor.getColumnIndexOrThrow(PART_QUANTITY));
+        try {
+            while (cursor.moveToNext()) {
+                //TODO: getColumnIndexOrThrow is a last line of defense. Ensure the front end handles column names
+                String partId = cursor.getString(
+                        cursor.getColumnIndexOrThrow(PART_ID));
+                String partDate = cursor.getString(
+                        cursor.getColumnIndexOrThrow(INITIAL_PART_DATE));
+                String partLocation = cursor.getString(
+                        cursor.getColumnIndexOrThrow(PART_LOCATION));
+                int quantity = cursor.getInt(
+                        cursor.getColumnIndexOrThrow(PART_QUANTITY));
 
-            allParts.add(new Part(partId, partDate, partLocation, quantity));
+                allParts.add(new Part(partId, partDate, partLocation, quantity));
+            }
+        } finally {
+            cursor.close();
+            db.close();
         }
-        cursor.close();
         return allParts;
     }
 
-    public void increaseQuantity(Part part, int additionAmount) {
+    public void increaseQuantity(Part part, int additionAmount) throws SQLException {
         SQLiteDatabase db = this.dbHelper.getWritableDatabase();
-        int rowsAffected = 0;
         db.beginTransaction();
         try {
             ContentValues values = new ContentValues();
             values.put(PART_QUANTITY, part.getPartQuantity() + additionAmount);
 
             String selection = "part_id = ?";
-            String[] selectionArgs = { part.getPartId() };
+            String[] selectionArgs = {part.getPartId()};
 
-            rowsAffected = db.update(
+            int rowsAffected = db.update(
                     INVENTORY,
                     values,
                     selection,
                     selectionArgs
             );
             if (rowsAffected == 0) {
-                throw new SQLException("Failed to update row in Inventory.");
+                throw new SQLException(ExceptionMessages.FAILED_TO_UPDATE_INVENTORY);
             }
-            updateTransactions(part, additionAmount, ADDITION);
+            updateTransactions(db, part, additionAmount, ADDITION);
 
             db.setTransactionSuccessful();
-        } catch (SQLException e) {
-            //TODO Add SQLException logging
-        } catch (Exception e) {
-            //TODO Add general logging
-        }
-        finally {
+        } finally {
             db.endTransaction();
+            db.close();
         }
-        db.close();
     }
 
-    public void removeQuantity(Part part, int reductionAmount) {
+    public void removeQuantity(Part part, int reductionAmount) throws SQLException {
         SQLiteDatabase db = this.dbHelper.getWritableDatabase();
-        int rowsAffected = 0;
         db.beginTransaction();
         try {
             // Basic input validation
             if (reductionAmount > part.getPartQuantity()) {
                 throw new IllegalArgumentException("Amount to remove exceeds current quantity.");
-            }
-            if (reductionAmount == part.getPartQuantity()) {
+            } else if (reductionAmount == part.getPartQuantity()) {
                 deletePart(part);
-            }
-            else {
+                updateTransactions(db, part, reductionAmount, DELETION);
+            } else {
                 ContentValues values = new ContentValues();
                 values.put(PART_QUANTITY, part.getPartQuantity() - reductionAmount);
 
                 String selection = "part_id = ?";
-                String[] selectionArgs = { part.getPartId() };
+                String[] selectionArgs = {part.getPartId()};
 
-                rowsAffected = db.update(
+                int rowsAffected = db.update(
                         INVENTORY,
                         values,
                         selection,
                         selectionArgs
                 );
                 if (rowsAffected == 0) {
-                    throw new SQLException("Failed to update row in Inventory.");
+                    throw new SQLException(ExceptionMessages.FAILED_TO_UPDATE_INVENTORY);
                 }
-                updateTransactions(part, reductionAmount, REDUCTION);
+                updateTransactions(db, part, reductionAmount, REDUCTION);
             }
             db.setTransactionSuccessful();
-        } catch (SQLException e) {
-            //TODO Add SQLException logging
-        } catch (Exception e) {
-            //TODO Add general logging
-        }
-        finally {
+        } finally {
             db.endTransaction();
         }
         db.close();
     }
 
-    public void deletePart(Part part) {
+    public void deletePart(Part part) throws SQLException {
         SQLiteDatabase db = this.dbHelper.getWritableDatabase();
-        int rowsDeleted = 0;
 
         db.beginTransaction();
-        String selection = "part_id LIKE ?";
-        String[] selectionArgs = { part.getPartId() };
+        String selection = PART_ID + " LIKE ?";
+        String[] selectionArgs = {part.getPartId()};
         try {
-            rowsDeleted = db.delete(
+            int rowsDeleted = db.delete(
                     INVENTORY,
                     selection,
                     selectionArgs
             );
             if (rowsDeleted == 0) {
-                throw new SQLException("Failed to delete row from Inventory");
+                throw new SQLException(ExceptionMessages.FAILED_TO_DELETE_INVENTORY);
             }
-            updateTransactions(part, part.getPartQuantity(), DELETION);
-        } catch (SQLException e) {
-            //TODO: log SQLExceptions here
-        } catch (Exception e) {
-            //TODO: log generic exceptions here
+            updateTransactions(db, part, part.getPartQuantity(), DELETION);
+            db.setTransactionSuccessful();
         } finally {
             db.endTransaction();
-        }
-    }
-    private long updateTransactions(Part part, int quantityChange, String transactionType) {
-        SQLiteDatabase db = this.dbHelper.getWritableDatabase();
-        String currentDate = new SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(new Date());
-        long newTransactionId = -1;
-        try {
-            ContentValues transactionValues = new ContentValues();
-            transactionValues.put(PART_ID, part.getPartId());
-            transactionValues.put(TRANSACTION_DATE, currentDate);
-            transactionValues.put(PART_QUANTITY, quantityChange);
-            transactionValues.put(TRANSACTION_TYPE, transactionType);
-
-            newTransactionId = db.insert(TRANSACTIONS, null, transactionValues);
-            if (newTransactionId == -1) {
-                throw new SQLException("Failed to update Transactions for type: " + transactionType);
-            }
-        } catch (SQLException e) {
-            //TODO: log SQLExceptions here
-        } catch (Exception e) {
-            //TODO: log generic exceptions here
-        } finally {
             db.close();
         }
+    }
+
+    // Called on successful CRUD operations, uses the existing db instance
+    private long updateTransactions(SQLiteDatabase db, Part part, int quantityChange, String transactionType) throws SQLException {
+        String currentDate = new SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(new Date());
+        ContentValues transactionValues = new ContentValues();
+
+        transactionValues.put(PART_ID, part.getPartId());
+        transactionValues.put(TRANSACTION_DATE, currentDate);
+        transactionValues.put(PART_QUANTITY, quantityChange);
+        transactionValues.put(TRANSACTION_TYPE, transactionType);
+
+        long newTransactionId = db.insert(TRANSACTIONS, null, transactionValues);
+        if (newTransactionId == -1) {
+            throw new SQLException(ExceptionMessages.FAILED_TO_INSERT_TRANSACTIONS);
+        }
+
         return newTransactionId;
     }
+
 }
 
